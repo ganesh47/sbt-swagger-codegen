@@ -14,15 +14,42 @@
  */
 package eu.unicredit.swagger.generators
 
-import eu.unicredit.swagger.SwaggerConversion
+import java.util
 
+import eu.unicredit.swagger.SwaggerConversion
 import treehugger.forest._
 import definitions._
+import io.swagger.models.{ComposedModel, Model, RefModel}
 import treehuggerDSL._
-
 import io.swagger.parser.SwaggerParser
 import io.swagger.models.properties._
+
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+
+
+class SuperComposedModel extends ComposedModel {
+  private var properties: java.util.Map[String, Property] = null
+
+  def populate(composed: ComposedModel): Unit = {
+    super.setAllOf(composed.getAllOf)
+    super.setParent(composed.getParent)
+    super.setDescription(composed.getDescription)
+    super.setExample(composed.getExample)
+    super.setInterfaces(composed.getInterfaces)
+    super.setChild(composed.getChild)
+    super.setExternalDocs(composed.getExternalDocs)
+    super.setReference(composed.getReference)
+    super.setTitle(composed.getTitle)
+    super.setVendorExtensions(composed.getVendorExtensions)
+  }
+
+  override def setProperties(properties: util.Map[String, Property]): Unit = {
+    this.properties = properties
+  }
+
+  override def getProperties: util.Map[String, Property] = properties
+}
 
 class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
 
@@ -56,11 +83,40 @@ class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
 
     val models = swagger.getDefinitions.asScala
 
+    val finalOnes = models.map {
+      x =>
+        (x._1, parseComposedModels(models, x._2))
+    }
     for {
-      (name, model) <- models
+      (name, model) <- finalOnes
     } yield
       SyntaxString(name + ".scala",
-                   generateModelInit(destPackage),
-                   generateClass(name, getProperties(model), Option(model.getDescription)))
+        generateModelInit(destPackage),
+        generateClass(name, getProperties(model), Option(model.getDescription)))
+  }
+
+  private def parseComposedModels(models: mutable.Map[String, Model], model: Model): Model = {
+    model match {
+      case model: ComposedModel =>
+        val props = if (null == model.getProperties) new util.HashMap[String, Property]() else model.getProperties
+        model.asInstanceOf[ComposedModel].getAllOf.asScala.foreach {
+          each =>
+            val items = parseRefModel(models, if (each.isInstanceOf[ComposedModel]) parseComposedModels(models, parseRefModel(models, each)) else each)
+            if (items!=null && items.getProperties != null && items != model )
+              props.putAll(items.getProperties)
+        }
+        val model1 = new SuperComposedModel
+        model1.populate(model.asInstanceOf[ComposedModel])
+        model1.setProperties(props)
+        model1
+      case _ => model
+    }
+  }
+
+  def parseRefModel(models: mutable.Map[String, Model], model: Model): Model = {
+    model match {
+      case model1: RefModel => parseRefModel(models, models(model1.getSimpleRef))
+      case _ => if (model.isInstanceOf[ComposedModel]) parseComposedModels(models, model) else model
+    }
   }
 }

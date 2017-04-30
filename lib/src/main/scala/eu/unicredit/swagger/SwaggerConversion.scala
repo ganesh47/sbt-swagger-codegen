@@ -14,6 +14,8 @@
  */
 package eu.unicredit.swagger
 
+import java.util
+
 import treehugger.forest._
 import definitions._
 import io.swagger.models.Model
@@ -21,6 +23,7 @@ import treehuggerDSL._
 import io.swagger.models.properties._
 import io.swagger.models.parameters._
 
+import scala.collection.JavaConversions.mapAsScalaMap
 import scala.collection.JavaConverters._
 
 trait SwaggerConversion {
@@ -39,6 +42,7 @@ trait SwaggerConversion {
     definitions.getClass("java.time.LocalDate")
 
   def noOptPropType(p: Property): Type = {
+    import collection.JavaConverters._
     p match {
       case s: StringProperty =>
         StringClass
@@ -55,13 +59,13 @@ trait SwaggerConversion {
       case i: BaseIntegerProperty =>
         IntClass
       case m: MapProperty =>
-        RootClass.newClass("Map") TYPE_OF (StringClass, noOptPropType(m.getAdditionalProperties))
+        RootClass.newClass("Map") TYPE_OF(StringClass, noOptPropType(m.getAdditionalProperties))
       case a: ArrayProperty =>
         ListClass TYPE_OF noOptPropType(a.getItems)
       case d: DecimalProperty =>
         BigDecimalClass
       case r: RefProperty =>
-        RootClass.newClass(r.getSimpleRef)
+        RootClass.newClass(cleanseName(r.getSimpleRef))
       case dt: DateProperty =>
         LocalDateClass
       case dt: DateTimeProperty =>
@@ -77,7 +81,8 @@ trait SwaggerConversion {
       case f: FileProperty =>
         throw new Exception(s"FileProperty $p is not supported yet")
       case o: ObjectProperty =>
-        throw new Exception(s"ObjectProperty $p is not supported yet")
+        val classes = getSeqOfClasses(o.getProperties)
+        if (classes.size > 1) RootClass.newClass("Tuple" + classes.size) TYPE_OF (classes: _*) else if (classes.size == 1) classes.head else RootClass.newClass("Any")
       case p: PasswordProperty =>
         throw new Exception(s"PasswordProperty $p is not supported yet")
       case u: UUIDProperty =>
@@ -89,6 +94,16 @@ trait SwaggerConversion {
         // should not happen as all existing types have been checked before
         throw new Exception(s"unexpected property type $x")
     }
+  }
+
+  def cleanseName(name: String): String = {
+    if (name.equals("object")) "`object`" else name
+  }
+
+  def getSeqOfClasses(items: util.Map[String, Property]): Seq[treehugger.forest.Type] = {
+    items.map {
+      item => noOptPropType(item._2)
+    }.toSeq
   }
 
   def paramType(p: Parameter): Type = {
