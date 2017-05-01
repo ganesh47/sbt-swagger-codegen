@@ -1,10 +1,11 @@
 lazy val common = Seq(
-    organization := "eu.unicredit",
-    version := "0.0.10-SNAPSHOT",
+    organization := "in.thedatateam",
+    version := "0.0.12-SNAPSHOT",
     crossScalaVersions := Seq("2.10.4"),
     scalacOptions ++= Seq("-target:jvm-1.7", "-feature", "-deprecation", "-language:_"),
-    resolvers += Resolver.sonatypeRepo("releases")
-  ) ++ sonatypePublish
+    resolvers += Resolver.sonatypeRepo("releases"),
+    licenses += ("APSL-2.0", url("https://www.apache.org/licenses/LICENSE-2.0"))
+  )
 
 lazy val lib = project
   .in(file("lib"))
@@ -28,48 +29,12 @@ lazy val plugin = project
 
 lazy val root = project
   .in(file("."))
+  .settings(common)
   .settings(
     publish := {}
   )
   .aggregate(lib, plugin)
 
-publishArtifact := false
 
-lazy val sonatypePublish = sonatypeSettings ++ Seq(
-    publishMavenStyle := true,
-    pomIncludeRepository := { _ =>
-    false
-  },
-    credentials += Credentials(Path.userHome / ".ivy2" / "sonatype.credentials"),
-    pomExtra := {
-    <url>https://github.com/unicredit/sbt-swagger-codegen</url>
-    <licenses>
-      <license>
-        <name>Apache 2</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      </license>
-    </licenses>
-    <scm>
-      <connection>scm:git:github.com/unicredit/sbt-swagger-codegen</connection>
-      <developerConnection>scm:git:git@github.com:unicredit/sbt-swagger-codegen</developerConnection>
-      <url>github.com/unicredit/sbt-swagger-codegen</url>
-    </scm>
-    <developers>
-      <developer>
-        <id>andreaTP</id>
-        <name>Andrea Peruffo</name>
-        <url>https://github.com/andreaTP/</url>
-      </developer>
-      <developer>
-        <id>fralken</id>
-        <name>Francesco Montecuccoli Degli Erri</name>
-        <url>https://github.com/fralken/</url>
-      </developer>
-      <developer>
-        <id>mfirry</id>
-        <name>Marco Firrincieli</name>
-        <url>https://github.com/mfirry/</url>
-      </developer>
-    </developers>
-  }
-  )
+
+
