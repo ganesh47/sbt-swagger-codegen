@@ -1,4 +1,4 @@
-import eu.unicredit.swagger.generators.DefaultModelGenerator
+import eu.unicredit.swagger.generators.{DefaultJsonGenerator, DefaultModelGenerator}
 
 /**
   * Created by Ganesh on 4/30/2017.
@@ -6,9 +6,15 @@ import eu.unicredit.swagger.generators.DefaultModelGenerator
 object SampleYamlTest {
   def main(args: Array[String]): Unit = {
 
-    val generator = new DefaultModelGenerator()
-    generator.generate("lib/src/test/resources/bitbucket.yaml","target").foreach{
-      x=> println(x.code)
+    val generatorM = new DefaultModelGenerator()
+    generatorM.generate("lib/src/test/resources/bitbucket.yaml", "target").foreach {
+      x => println(x.code)
     }
+
+    val generatorJM = new DefaultJsonGenerator()
+    generatorJM.generate("lib/src/test/resources/bitbucket.yaml", "target").foreach {
+      x => println(x.code)
+    }
+
   }
 }

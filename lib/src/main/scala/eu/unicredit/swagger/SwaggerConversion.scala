@@ -18,18 +18,20 @@ import java.util
 
 import treehugger.forest._
 import definitions._
-import io.swagger.models.Model
+import eu.unicredit.swagger.generators.SuperComposedModel
+import io.swagger.models.{ComposedModel, Model, RefModel}
 import treehuggerDSL._
 import io.swagger.models.properties._
 import io.swagger.models.parameters._
 
 import scala.collection.JavaConversions.mapAsScalaMap
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 trait SwaggerConversion {
 
   def propType(p: Property): Type = {
-    if (!p.getRequired)
+    if (!p.getRequired && !p.isInstanceOf[ObjectProperty])
       OptionClass TYPE_OF noOptPropType(p)
     else
       noOptPropType(p)
@@ -82,7 +84,7 @@ trait SwaggerConversion {
         throw new Exception(s"FileProperty $p is not supported yet")
       case o: ObjectProperty =>
         val classes = getSeqOfClasses(o.getProperties)
-        if (classes.size > 1) RootClass.newClass("Tuple" + classes.size) TYPE_OF (classes: _*) else if (classes.size == 1) classes.head else RootClass.newClass("Any")
+        if (classes.size > 1) RootClass.newClass("Tuple" + classes.size) TYPE_OF (classes: _*) else if (classes.size == 1) classes.head else RootClass.newClass("String")
       case p: PasswordProperty =>
         throw new Exception(s"PasswordProperty $p is not supported yet")
       case u: UUIDProperty =>
@@ -107,7 +109,7 @@ trait SwaggerConversion {
   }
 
   def paramType(p: Parameter): Type = {
-    if (!p.getRequired)
+    if (!p.getRequired && !p.isInstanceOf[ObjectProperty])
       OptionClass TYPE_OF noOptParamType(p)
     else
       noOptParamType(p)
@@ -130,5 +132,30 @@ trait SwaggerConversion {
   def getProperties(model: Model): Iterable[(String, Property)] = {
     val props = model.getProperties
     if (props == null) Iterable.empty else props.asScala
+  }
+
+  def parseComposedModels(models: mutable.Map[String, Model], model: Model): Model = {
+    model match {
+      case model: ComposedModel =>
+        val props = if (null == model.getProperties) new util.HashMap[String, Property]() else model.getProperties
+        model.asInstanceOf[ComposedModel].getAllOf.asScala.foreach {
+          each =>
+            val items = parseRefModel(models, if (each.isInstanceOf[ComposedModel]) parseComposedModels(models, parseRefModel(models, each)) else each)
+            if (items!=null && items.getProperties != null && items != model )
+              props.putAll(items.getProperties)
+        }
+        val model1 = new SuperComposedModel
+        model1.populate(model.asInstanceOf[ComposedModel])
+        model1.setProperties(props)
+        model1
+      case _ => model
+    }
+  }
+
+  def parseRefModel(models: mutable.Map[String, Model], model: Model): Model = {
+    model match {
+      case model1: RefModel => parseRefModel(models, models(model1.getSimpleRef))
+      case _ => if (model.isInstanceOf[ComposedModel]) parseComposedModels(models, model) else model
+    }
   }
 }

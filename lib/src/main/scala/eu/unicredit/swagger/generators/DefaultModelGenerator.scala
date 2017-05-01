@@ -95,28 +95,5 @@ class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
         generateClass(name, getProperties(model), Option(model.getDescription)))
   }
 
-  private def parseComposedModels(models: mutable.Map[String, Model], model: Model): Model = {
-    model match {
-      case model: ComposedModel =>
-        val props = if (null == model.getProperties) new util.HashMap[String, Property]() else model.getProperties
-        model.asInstanceOf[ComposedModel].getAllOf.asScala.foreach {
-          each =>
-            val items = parseRefModel(models, if (each.isInstanceOf[ComposedModel]) parseComposedModels(models, parseRefModel(models, each)) else each)
-            if (items!=null && items.getProperties != null && items != model )
-              props.putAll(items.getProperties)
-        }
-        val model1 = new SuperComposedModel
-        model1.populate(model.asInstanceOf[ComposedModel])
-        model1.setProperties(props)
-        model1
-      case _ => model
-    }
-  }
 
-  def parseRefModel(models: mutable.Map[String, Model], model: Model): Model = {
-    model match {
-      case model1: RefModel => parseRefModel(models, models(model1.getSimpleRef))
-      case _ => if (model.isInstanceOf[ComposedModel]) parseComposedModels(models, model) else model
-    }
-  }
 }
