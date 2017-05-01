@@ -112,7 +112,7 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
               } else {
                 REF(name) APPLY {
                   for ((pname, prop) <- properties) yield {
-                    val mtd = if (!prop.getRequired && !prop.isInstanceOf[ObjectProperty]) "asOpt" else "as"
+                    val mtd = if (!prop.getRequired) "asOpt" else "as"
                     PAREN(REF("json") INFIX("\\", LIT(pname))) DOT mtd APPLYTYPE noOptPropType(prop)
                   }
                 }

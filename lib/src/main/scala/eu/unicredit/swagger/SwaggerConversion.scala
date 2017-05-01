@@ -31,7 +31,7 @@ import scala.collection.mutable
 trait SwaggerConversion {
 
   def propType(p: Property): Type = {
-    if (!p.getRequired && !p.isInstanceOf[ObjectProperty])
+    if (!p.getRequired )
       OptionClass TYPE_OF noOptPropType(p)
     else
       noOptPropType(p)
@@ -109,7 +109,7 @@ trait SwaggerConversion {
   }
 
   def paramType(p: Parameter): Type = {
-    if (!p.getRequired && !p.isInstanceOf[ObjectProperty])
+    if (!p.getRequired )
       OptionClass TYPE_OF noOptParamType(p)
     else
       noOptParamType(p)
