@@ -54,11 +54,11 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
     //prepare tuple reads and writes for context
 
     val counters: scala.collection.mutable.Set[Int] = new scala.collection.mutable.HashSet()
-    val maxPropCount = models.map(x => parseComposedModels(models, x._2))
+    val maxPropCountS = models.map(x => parseComposedModels(models, x._2))
       .map(x => x.getProperties.asScala)
       .filter(_.exists(_._2.isInstanceOf[ObjectProperty]))
       .map(_.size)
-      .max
+    val maxPropCount = if(maxPropCountS.nonEmpty) maxPropCountS.max else 3
     (2 to maxPropCount).map(counters.add)
 
 

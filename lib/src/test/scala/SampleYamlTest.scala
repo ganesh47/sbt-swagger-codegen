@@ -7,12 +7,12 @@ object SampleYamlTest {
   def main(args: Array[String]): Unit = {
 
     val generatorM = new DefaultModelGenerator()
-    generatorM.generate("lib/src/test/resources/bitbucket.yaml", "target").foreach {
+    generatorM.generate("lib/src/test/resources/teamcity.yaml", "target").foreach {
       x => println(x.code)
     }
 
     val generatorJM = new DefaultJsonGenerator()
-    generatorJM.generate("lib/src/test/resources/bitbucket.yaml", "target").foreach {
+    generatorJM.generate("lib/src/test/resources/teamcity.yaml", "target").foreach {
       x => println(x.code)
     }
 
