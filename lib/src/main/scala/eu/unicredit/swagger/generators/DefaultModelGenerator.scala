@@ -14,6 +14,7 @@
  */
 package eu.unicredit.swagger.generators
 
+import java.io.File
 import java.util
 
 import eu.unicredit.swagger.SwaggerConversion
@@ -23,6 +24,7 @@ import io.swagger.models.{ComposedModel, Model, RefModel}
 import treehuggerDSL._
 import io.swagger.parser.SwaggerParser
 import io.swagger.models.properties._
+import treehugger.forest
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -54,10 +56,10 @@ class SuperComposedModel extends ComposedModel {
 class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
 
   def generateClass(name: String, props: Iterable[(String, Property)], comments: Option[String]): String = {
-    val GenClass = RootClass.newClass(name)
+    val GenClass = RootClass.newClass(cleanseName(name))
 
     val params: Iterable[ValDef] = for ((pname, prop) <- props)
-      yield PARAM(pname, propType(prop)): ValDef
+      yield PARAM(cleanseName(pname), propType(prop)): ValDef
 
     val tree: Tree =
       if (params.isEmpty)
@@ -70,6 +72,7 @@ class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
     treeToString(resTree)
   }
 
+
   def generateModelInit(packageName: String): String = {
     //val initTree =
     //PACKAGE(packageName)
@@ -80,19 +83,19 @@ class DefaultModelGenerator extends ModelGenerator with SwaggerConversion {
 
   def generate(fileName: String, destPackage: String): Iterable[SyntaxString] = {
     val swagger = new SwaggerParser().read(fileName)
-
     val models = swagger.getDefinitions.asScala
-
     val finalOnes = models.map {
       x =>
         (x._1, parseComposedModels(models, x._2))
     }
     for {
       (name, model) <- finalOnes
-    } yield
-      SyntaxString(name + ".scala",
-        generateModelInit(destPackage),
+    } yield {
+      val system = new File(fileName).getName.split("\\.")(0)
+      SyntaxString(name + "_" + system + ".scala",
+        generateModelInit(destPackage + "." + system),
         generateClass(name, getProperties(model), Option(model.getDescription)))
+    }
   }
 
 

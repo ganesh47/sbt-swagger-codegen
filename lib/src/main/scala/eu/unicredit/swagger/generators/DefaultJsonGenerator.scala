@@ -15,6 +15,8 @@
 package eu.unicredit.swagger.generators
 
 
+import java.io.File
+
 import eu.unicredit.swagger.SwaggerConversion
 import treehugger.forest._
 import definitions._
@@ -46,7 +48,7 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
 
   def generateJsonRW(fileName: String): List[ValOrDefDef] = {
     val swagger = new SwaggerParser().read(fileName)
-
+    val system = new File(fileName).getName.split("\\.")(0)
     val models = swagger.getDefinitions.asScala
 
     val realModels = new collection.mutable.HashMap[String, Model]
@@ -58,7 +60,7 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
       .map(x => x.getProperties.asScala)
       .filter(_.exists(_._2.isInstanceOf[ObjectProperty]))
       .map(_.size)
-    val maxPropCount = if(maxPropCountS.nonEmpty) maxPropCountS.max else 3
+    val maxPropCount = if (maxPropCountS.nonEmpty) maxPropCountS.max else 3
     (2 to maxPropCount).map(counters.add)
 
 
@@ -87,40 +89,41 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
       c <- Seq("Reads", "Writes")
     } yield {
       var properties = getProperties(model)
-      parseForProperty(name, c, properties)
+      parseForProperty(name, c, properties, system)
     }).toList
 
     tupleDefs ++ swaggerModels
   }
 
-  private def parseForProperty(name: String, c: String, properties: Iterable[(String, Property)]): ValOrDefDef = {
+  private def parseForProperty(name: String, c: String, properties: Iterable[(String, Property)], system: String): ValOrDefDef = {
     val caseObject = false
     val typeName = if (caseObject) s"$name.type" else if (name.equals("object")) "`object`" else name
-    extractVal(name, c, properties, caseObject, typeName)
+    extractVal(name, c, properties, caseObject, cleanseName(typeName), system)
   }
 
-  private def extractVal(name: String, c: String, properties: Iterable[(String, Property)], caseObject: Boolean, typeName: String): ValOrDefDef = {
-    VAL(s"$name$c", s"$c[$typeName]") withFlags(Flags.IMPLICIT, Flags.LAZY) := {
+  private def extractVal(name: String, c: String, properties: Iterable[(String, Property)], caseObject: Boolean, typeName: String, system: String): ValOrDefDef = {
+    val typeNamez = system + "." + typeName
+    VAL(cleanseName(s"$name$c"), s"$c[$typeNamez]") withFlags(Flags.IMPLICIT, Flags.LAZY) := {
       c match {
         case "Reads" =>
           val param = VAL("json").tree
-          ANONDEF(s"$c[$typeName]") :=
+          ANONDEF(s"$c[${system}.$typeName]") :=
             LAMBDA(param) ==>
               REF("JsSuccess") APPLY {
               if (caseObject) {
-                REF(name)
+                REF(system + "." + cleanseName(name))
               } else {
-                REF(name) APPLY {
+                REF(system + "." + cleanseName(name)) APPLY {
                   for ((pname, prop) <- properties) yield {
                     val mtd = if (!prop.getRequired) "asOpt" else "as"
-                    PAREN(REF("json") INFIX("\\", LIT(pname))) DOT mtd APPLYTYPE noOptPropType(prop)
+                    PAREN(REF("json") INFIX("\\", LIT(cleanseName(pname)))) DOT mtd APPLYTYPE noOptPropType(prop, system)
                   }
                 }
               }
             }
         case "Writes" =>
           val param = VAL("o").tree
-          ANONDEF(s"$c[$typeName]") :=
+          ANONDEF(s"$c[${system}.$typeName]") :=
             LAMBDA(param) ==>
               REF("JsObject") APPLY {
               if (caseObject) {
@@ -129,7 +132,7 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
                 SeqClass APPLY {
                   for ((pname, prop) <- properties)
                     yield {
-                      LIT(pname) INFIX("->", (REF("Json") DOT "toJson") (REF("o") DOT pname))
+                      LIT(pname) INFIX("->", (REF("Json") DOT "toJson") (REF("o") DOT cleanseName(pname)))
                     }
                 } DOT "filter" APPLY (REF("_") DOT "_2" INFIX("!=", REF("JsNull")))
               }

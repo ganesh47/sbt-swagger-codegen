@@ -43,7 +43,7 @@ trait SwaggerConversion {
   private lazy val LocalDateClass =
     definitions.getClass("java.time.LocalDate")
 
-  def noOptPropType(p: Property): Type = {
+  def noOptPropType(p: Property,system:String=""): Type = {
     import collection.JavaConverters._
     p match {
       case s: StringProperty =>
@@ -61,13 +61,13 @@ trait SwaggerConversion {
       case i: BaseIntegerProperty =>
         IntClass
       case m: MapProperty =>
-        RootClass.newClass("Map") TYPE_OF(StringClass, noOptPropType(m.getAdditionalProperties))
+        RootClass.newClass("Map") TYPE_OF(StringClass, (if(system.length>0) system+"." else "")+noOptPropType(m.getAdditionalProperties))
       case a: ArrayProperty =>
-        ListClass TYPE_OF noOptPropType(a.getItems)
+        ListClass TYPE_OF noOptPropType(a.getItems,system)
       case d: DecimalProperty =>
         BigDecimalClass
       case r: RefProperty =>
-        RootClass.newClass(cleanseName(r.getSimpleRef))
+        RootClass.newClass((if(system.length>0) system+"." else "") + cleanseName(r.getSimpleRef))
       case dt: DateProperty =>
         LocalDateClass
       case dt: DateTimeProperty =>
@@ -83,7 +83,7 @@ trait SwaggerConversion {
       case f: FileProperty =>
         throw new Exception(s"FileProperty $p is not supported yet")
       case o: ObjectProperty =>
-        val classes = getSeqOfClasses(o.getProperties)
+        val classes = getSeqOfClasses(o.getProperties,system)
         if (classes.size > 1) RootClass.newClass("Tuple" + classes.size) TYPE_OF (classes: _*) else if (classes.size == 1) classes.head else RootClass.newClass("String")
       case p: PasswordProperty =>
         throw new Exception(s"PasswordProperty $p is not supported yet")
@@ -99,12 +99,15 @@ trait SwaggerConversion {
   }
 
   def cleanseName(name: String): String = {
-    if (name.equals("object")) "`object`" else name
+    if (name.equals("object")) "`object`" else if (name.contains("-")||name.equals("type")) "`"+name+"`" else name
+  }
+  def cleanseProp(name: String): String = {
+    if (name.equals("object")) "`object`" else if (name.contains("-")||name.equals("type")) "`"+name+"`" else name
   }
 
-  def getSeqOfClasses(items: util.Map[String, Property]): Seq[treehugger.forest.Type] = {
+  def getSeqOfClasses(items: util.Map[String, Property],system:String=""): Seq[treehugger.forest.Type] = {
     items.map {
-      item => noOptPropType(item._2)
+      item => noOptPropType(item._2,system)
     }.toSeq
   }
 

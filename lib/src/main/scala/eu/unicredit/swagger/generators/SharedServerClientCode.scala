@@ -24,6 +24,7 @@ import io.swagger.models._
 import io.swagger.models.parameters._
 
 trait SharedServerClientCode extends SwaggerConversion {
+
   import java.io.File.separator
   import java.io.File.separatorChar
 
@@ -72,7 +73,7 @@ trait SharedServerClientCode extends SwaggerConversion {
     respTypeMap.flatMap {
       case (k, v) =>
         Option(op.getResponses get k) map { response =>
-          v -> Option(response.getSchema).map(noOptPropType)
+          v -> Option(response.getSchema).map(x => noOptPropType(x))
         }
     }.headOption
 
