@@ -33,7 +33,7 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
   def generateJsonInit(packageName: String): String = {
     val initTree =
       BLOCK {
-        Seq(IMPORT("play.api.libs.json", "_"))
+        Seq(IMPORT("play.api.libs.json", "_"),IMPORT("play.api.libs.json", "_"))
       } inPackage packageName
 
     treeToString(initTree)
@@ -141,17 +141,18 @@ class DefaultJsonGenerator extends JsonGenerator with SwaggerConversion {
     }
   }
 
-  def generateJson(destPackage: String, vds: List[ValOrDefDef]): Iterable[SyntaxString] = {
+  def generateJson(destPackage: String, vds: List[ValOrDefDef],fileName:String): Iterable[SyntaxString] = {
+    val system = new File(fileName).getName.split("\\.")(0)
     val pre = generateJsonInit(destPackage)
 
-    val tree = PACKAGEOBJECTDEF("json") := BLOCK(vds)
+    val tree = PACKAGEOBJECTDEF("json"+system) := BLOCK(vds)
 
     val code = treeToString(tree)
-    Seq(SyntaxString("json", pre, code))
+    Seq(SyntaxString(system, pre, code))
   }
 
   def generate(fileName: String, destPackage: String): Iterable[SyntaxString] = {
-    generateJson(destPackage, generateJsonRW(fileName))
+    generateJson(destPackage, generateJsonRW(fileName),fileName)
   }
 
   /**

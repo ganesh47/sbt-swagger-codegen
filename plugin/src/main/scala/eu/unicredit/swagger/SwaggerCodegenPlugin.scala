@@ -260,8 +260,9 @@ object SwaggerCodegenPlugin extends AutoPlugin {
         }).flatten
 
       jsonFormats.foreach { ss =>
-        val jsonDir = packageDir(destDir, ss.name)
-        IO write (jsonDir / "package.scala", ss.code)
+        val jsonDir = packageDir(destDir, "json")
+        println(" generating json at "+jsonDir.getAbsolutePath+" / "+ss.name)
+        IO write (destDir / (ss.name+"Json.scala") , ss.code)
       }
     }
 
@@ -339,6 +340,7 @@ object SwaggerCodegenPlugin extends AutoPlugin {
     val destDir = packageDir(targetDir, codegenPackage + ".client")
 
     clients.foreach { ss =>
+      println(" generating json at "+ss.name)
       IO write (destDir / ss.name, ss.code)
     }
 
